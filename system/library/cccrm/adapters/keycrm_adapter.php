@@ -40,8 +40,10 @@ class KeycrmAdapter implements AdapterInterface {
 			];
 		}
 
+		$uuid = self::sourceUuid((int)$order['order_id'], (string)($config['uuid_prefix'] ?? ''));
+
 		$payload = [
-			'source_uuid'     => 'oc-' . $order['order_id'],
+			'source_uuid'     => $uuid,
 			'buyer'           => [
 				'full_name' => $order['buyer']['full_name'],
 				'email'     => $order['buyer']['email'],
@@ -79,6 +81,33 @@ class KeycrmAdapter implements AdapterInterface {
 		$decoded = json_decode($res['body'], true);
 		$ok = $res['status'] >= 200 && $res['status'] < 300 && is_array($decoded) && !empty($decoded['id']);
 
+		if (!$ok) {
+			// ⚠ KeyCRM answers a bare HTTP 500 "Server Error" when an order with the
+			// same source_uuid already exists (verified against the live API). That
+			// happens after a reinstall/replay — the order IS in the CRM, so look it
+			// up and treat it as synced instead of retrying forever.
+			$existing = $this->findBySourceUuid($config, $uuid);
+			if ($existing !== null) {
+				if ($this->sameOrder($existing, $order)) {
+					return [
+						'ok'          => true,
+						'external_id' => (string)$existing['id'],
+						'request'     => $reqJson,
+						'response'    => json_encode($existing, JSON_UNESCAPED_UNICODE),
+						'error'       => '',
+					];
+				}
+				// Same uuid, different order — two stores share one KeyCRM account.
+				return [
+					'ok'          => false,
+					'external_id' => '',
+					'request'     => $reqJson,
+					'response'    => $res['body'],
+					'error'       => 'source_uuid ' . $uuid . ' already belongs to another order in KeyCRM — set a unique UUID prefix for this store',
+				];
+			}
+		}
+
 		return [
 			'ok'          => $ok,
 			'external_id' => $ok ? (string)$decoded['id'] : '',
@@ -86,6 +115,37 @@ class KeycrmAdapter implements AdapterInterface {
 			'response'    => $res['body'],
 			'error'       => $ok ? '' : ('HTTP ' . $res['status'] . ($res['error'] ? ' ' . $res['error'] : '')),
 		];
+	}
+
+	/**
+	 * source_uuid used to tie an OpenCart order to its KeyCRM order. The optional
+	 * prefix keeps two stores that share one KeyCRM account from colliding on the
+	 * same OpenCart order id.
+	 */
+	public static function sourceUuid(int $orderId, string $prefix = ''): string {
+		$prefix = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $prefix));
+		return $prefix !== '' ? 'oc-' . $prefix . '-' . $orderId : 'oc-' . $orderId;
+	}
+
+	/** Look up an existing CRM order by source_uuid (returns null when absent). */
+	private function findBySourceUuid(array $config, string $uuid): ?array {
+		$res = $this->fetchPage($config, '/order', ['limit' => 5, 'filter[source_uuid]' => $uuid]);
+		if (empty($res['ok']) || empty($res['data'])) {
+			return null;
+		}
+		foreach ($res['data'] as $row) {
+			if ((string)($row['source_uuid'] ?? '') === $uuid) {
+				return $row;
+			}
+		}
+		return null;
+	}
+
+	/** Is the CRM order the same one we tried to push (total match, 1 cent tolerance)? */
+	private function sameOrder(array $crmOrder, array $order): bool {
+		$crmTotal = (float)($crmOrder['grand_total'] ?? 0);
+		$ourTotal = (float)$order['grand_total'];
+		return abs($crmTotal - $ourTotal) < 0.011;
 	}
 
 	/**

@@ -104,8 +104,9 @@ class ReverseSync {
 
 	/** Apply one KeyCRM order (status + tracking code) to its OpenCart order. */
 	private function applyOrder(array $crmOrder, array $map, bool $notify, array &$summary): void {
-		// Matching: the forward sync writes source_uuid "oc-{order_id}".
-		if (!preg_match('/^oc-(\d+)$/', (string)($crmOrder['source_uuid'] ?? ''), $m)) {
+		// Matching: the forward sync writes source_uuid "oc-{order_id}", or
+		// "oc-{prefix}-{order_id}" when a store UUID prefix is configured.
+		if (!preg_match('/^oc-(?:[a-z0-9]+-)?(\d+)$/', (string)($crmOrder['source_uuid'] ?? ''), $m)) {
 			return;
 		}
 		$orderId = (int)$m[1];
@@ -196,7 +197,7 @@ class ReverseSync {
 
 	private function rememberTracking(int $orderId, string $code): void {
 		$this->db->query("UPDATE `" . Logger::table() . "` SET
-			tracking_code = '" . $this->db->escape(mb_substr($code, 0, 64)) . "',
+			tracking_code = '" . $this->db->escape(function_exists('mb_substr') ? mb_substr($code, 0, 64) : substr($code, 0, 64)) . "',
 			updated_at = NOW()
 			WHERE order_id = " . $orderId . " AND target = 'keycrm'");
 	}

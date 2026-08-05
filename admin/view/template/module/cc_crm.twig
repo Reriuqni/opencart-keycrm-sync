@@ -113,6 +113,13 @@
                   <label class="col-sm-3 col-form-label">{{ entry_source_id }}</label>
                   <div class="col-sm-9"><input type="text" name="module_cc_crm_targets[{{ slug }}][source_id]" value="{{ cfg.source_id }}" class="form-control" style="max-width:200px"/></div>
                 </div>
+                <div class="row mb-3">
+                  <label class="col-sm-3 col-form-label">{{ entry_uuid_prefix }}</label>
+                  <div class="col-sm-9">
+                    <input type="text" name="module_cc_crm_targets[{{ slug }}][uuid_prefix]" value="{{ cfg.uuid_prefix }}" placeholder="shop1" class="form-control" style="max-width:200px"/>
+                    <div class="form-text">{{ help_uuid_prefix }}</div>
+                  </div>
+                </div>
                 {% endif %}
                 <div class="row mb-3">
                   <div class="col-sm-9 offset-sm-3">

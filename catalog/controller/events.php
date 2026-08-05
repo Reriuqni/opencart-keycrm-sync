@@ -18,7 +18,7 @@ class Events extends \Opencart\System\Engine\Controller {
 	 * catalog/model/checkout/order.addHistory/after
 	 * args: [order_id, order_status_id, comment, notify]
 	 */
-	public function orderHistoryAdded(string &$route, array &$args, mixed &$output): void {
+	public function orderHistoryAdded(string &$route, array &$args, &$output = null): void {
 		// Anti-loop: history written by the reverse sync must never be pushed back.
 		if (ReverseSync::$active) {
 			return;

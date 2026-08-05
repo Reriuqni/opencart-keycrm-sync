@@ -48,6 +48,9 @@ class Settings {
 				'base_url'  => 'https://openapi.keycrm.app/v1',
 				'api_key'   => '',
 				'source_id' => '',   // KeyCRM source_id
+				// Optional tag mixed into source_uuid so two stores pushing into one
+				// KeyCRM account never collide on the same OpenCart order id.
+				'uuid_prefix' => '',
 			],
 		];
 	}

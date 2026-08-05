@@ -53,8 +53,8 @@ class Logger {
 			external_id = '" . $this->db->escape($externalId) . "',
 			last_error = '',
 			attempts = attempts + 1,
-			request_excerpt = '" . $this->db->escape(mb_substr($request, 0, 4000)) . "',
-			response_excerpt = '" . $this->db->escape(mb_substr($response, 0, 4000)) . "',
+			request_excerpt = '" . $this->db->escape(function_exists('mb_substr') ? mb_substr($request, 0, 4000) : substr($request, 0, 4000)) . "',
+			response_excerpt = '" . $this->db->escape(function_exists('mb_substr') ? mb_substr($response, 0, 4000) : substr($response, 0, 4000)) . "',
 			updated_at = NOW()
 			WHERE id = " . (int)$id);
 	}
@@ -62,10 +62,10 @@ class Logger {
 	public function fail(int $id, string $error, string $request, string $response): void {
 		$this->db->query("UPDATE `" . self::table() . "` SET
 			status = 'failed',
-			last_error = '" . $this->db->escape(mb_substr($error, 0, 1000)) . "',
+			last_error = '" . $this->db->escape(function_exists('mb_substr') ? mb_substr($error, 0, 1000) : substr($error, 0, 1000)) . "',
 			attempts = attempts + 1,
-			request_excerpt = '" . $this->db->escape(mb_substr($request, 0, 4000)) . "',
-			response_excerpt = '" . $this->db->escape(mb_substr($response, 0, 4000)) . "',
+			request_excerpt = '" . $this->db->escape(function_exists('mb_substr') ? mb_substr($request, 0, 4000) : substr($request, 0, 4000)) . "',
+			response_excerpt = '" . $this->db->escape(function_exists('mb_substr') ? mb_substr($response, 0, 4000) : substr($response, 0, 4000)) . "',
 			updated_at = NOW()
 			WHERE id = " . (int)$id);
 	}

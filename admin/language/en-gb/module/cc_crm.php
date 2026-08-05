@@ -64,3 +64,6 @@ $_['help_reverse_stock']  = 'Update product quantities (matched by SKU) from Key
 $_['help_reverse_map']    = 'Only statuses present in the map are applied. Enter the API key on the CRM systems tab and click "Load KeyCRM statuses".';
 
 $_['error_permission'] = 'You do not have permission to manage this module!';
+
+$_['entry_uuid_prefix'] = 'Store UUID prefix';
+$_['help_uuid_prefix']  = 'Only needed when several stores push into one KeyCRM account — otherwise order #5 from different stores shares one source_uuid and KeyCRM answers HTTP 500.';

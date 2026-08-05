@@ -1,6 +1,8 @@
 <?php
 namespace Opencart\System\Library\Cccrm;
 
+require_once __DIR__ . '/polyfill.php';
+
 /**
  * At-rest encryption for stored CRM API keys. Mirrors the scheme used by the
  * CatCode PRRO connector: sodium_crypto_secretbox when available, otherwise an
