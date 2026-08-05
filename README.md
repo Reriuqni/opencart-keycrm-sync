@@ -40,4 +40,4 @@ Repository root is the extension payload (`admin/`, `catalog/`, `system/`, `inst
 
 - 📄 Сторінка модуля з документацією та ліцензією: **https://catcode.com.ua/modules/opencart-keycrm-sync/**
 - 🧩 Усі наші модулі для OpenCart та WooCommerce: https://catcode.com.ua/modules/
-- ✉️ Підтримка: catcode.info@gmail.com
+- ✉️ Підтримка: info@catcode.com.ua
