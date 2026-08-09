@@ -7,12 +7,26 @@ require_once __DIR__ . '/settings.php';
  * Turns an OpenCart order (as returned by model_checkout_order->getOrder plus
  * the order_product / order_total rows) into a CRM-agnostic normalized array
  * that each adapter formats to its own API shape.
+ *
+ * 🔴 Currency. OpenCart stores order_product.price/total, order_total.value and
+ * order.total in the shop's BASE currency, while order.currency_value is the
+ * rate to the currency the customer was actually charged in (order.currency_code).
+ * Handing the raw database numbers to the CRM means a shop whose base currency
+ * is not its selling currency reports the wrong money — on a USD-based shop
+ * selling in UAH an 830 000 ₴ order arrives in the CRM as 20 005. Every amount
+ * below is therefore multiplied by the order's own historical rate.
  */
 class OrderMapper {
 	public static function build($db, array $order, Settings $settings): array {
 		$orderId  = (int)$order['order_id'];
 		$skipZero = $settings->get('skip_zero', '1') === '1';
 		$inclShip = $settings->get('include_ship', '1') === '1';
+
+		// A missing/zero rate would silently zero every amount — treat it as 1.
+		$rate = (float)($order['currency_value'] ?? 1);
+		if ($rate <= 0) {
+			$rate = 1.0;
+		}
 
 		$rows = $db->query("SELECT op.product_id, op.name, op.model, op.quantity, op.price, op.total,
 				COALESCE(p.sku, '') AS sku
@@ -23,7 +37,7 @@ class OrderMapper {
 		$items = [];
 		foreach ($rows as $r) {
 			$qty   = (float)$r['quantity'];
-			$price = round((float)$r['price'], 2);
+			$price = round((float)$r['price'] * $rate, 2);
 			if ($qty <= 0) {
 				continue;
 			}
@@ -35,14 +49,14 @@ class OrderMapper {
 				'name'  => (string)$r['name'],
 				'price' => $price,
 				'qty'   => $qty,
-				'total' => round((float)$r['total'], 2),
+				'total' => round((float)$r['total'] * $rate, 2),
 			];
 		}
 
 		$shipCost = 0.0;
 		if ($inclShip) {
 			$ship = $db->query("SELECT value FROM `" . DB_PREFIX . "order_total` WHERE order_id = " . $orderId . " AND code = 'shipping' LIMIT 1")->row;
-			$shipCost = round((float)($ship['value'] ?? 0), 2);
+			$shipCost = round((float)($ship['value'] ?? 0) * $rate, 2);
 		}
 
 		$paymentCode = '';
@@ -80,7 +94,7 @@ class OrderMapper {
 			'order_id'     => $orderId,
 			'order_number' => (string)$orderId,
 			'source_label' => (string)$settings->get('source_label', 'OpenCart'),
-			'grand_total'  => round((float)($order['total'] ?? 0), 2),
+			'grand_total'  => round((float)($order['total'] ?? 0) * $rate, 2),
 			'currency'     => (string)($order['currency_code'] ?? 'UAH'),
 			'created_at'   => (string)($order['date_added'] ?? ''),
 			'comment'      => (string)($order['comment'] ?? ''),
